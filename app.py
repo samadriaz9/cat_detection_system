@@ -96,16 +96,16 @@ def point_in_polygon(point, polygon):
 
 
 def pulse_relay():
-    """Pulse relay using GPIO-reset method"""
-    print("Relay: ON (LOW)")
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(RELAY_PIN, GPIO.OUT)
-    GPIO.output(RELAY_PIN, GPIO.LOW)  # Relay ON (active LOW)
-    time.sleep(PULSE_DURATION)
+    """Pulse relay using GPIO"""
+    try:
+        print("Relay: ON (LOW)")
+        GPIO.output(RELAY_PIN, GPIO.LOW)  # Relay ON (active LOW)
+        time.sleep(PULSE_DURATION)
 
-    print("Relay: OFF (HIGH)")
-    GPIO.output(RELAY_PIN, GPIO.HIGH)  # Relay OFF
-    GPIO.cleanup()  # Reset GPIO completely
+        print("Relay: OFF (HIGH)")
+        GPIO.output(RELAY_PIN, GPIO.HIGH)  # Relay OFF
+    except Exception as e:
+        print(f"Error pulsing relay: {e}")
 
 
 def detection_loop():
@@ -252,8 +252,7 @@ def detection_loop():
             picam2.close()
         except Exception as e:
             print(f"Error closing camera: {e}")
-        # GPIO.cleanup()
-        print("Camera released, GPIO cleaned.")
+        print("Camera released")
 
 
 def generate_frames():
@@ -905,6 +904,15 @@ def status():
 
 
 if __name__ == '__main__':
+    # Initialize GPIO
+    try:
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(RELAY_PIN, GPIO.OUT)
+        GPIO.output(RELAY_PIN, GPIO.HIGH)  # Start with relay OFF
+        print("GPIO initialized successfully")
+    except Exception as e:
+        print(f"Warning: GPIO initialization failed: {e}")
+    
     # Load saved polygon on startup
     load_polygon()
     
@@ -921,5 +929,9 @@ if __name__ == '__main__':
     print("Access the application at: http://<your-ip>:5000")
     print("="*50 + "\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    finally:
+        GPIO.cleanup()
+        print("GPIO cleaned up")
 
