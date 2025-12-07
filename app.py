@@ -18,7 +18,7 @@ import numpy as np
 from picamera2 import Picamera2
 
 MODEL_PATH = "best.pt"
-CONFIDENCE_THRESHOLD = 0.25
+CONFIDENCE_THRESHOLD = 0.65
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 RELAY_PIN = 18
