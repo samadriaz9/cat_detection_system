@@ -15,10 +15,9 @@ import base64
 import json
 import os
 import numpy as np
-from picamera2 import Picamera2
 
-MODEL_PATH = "best.onnx"
-CONFIDENCE_THRESHOLD = 0.25
+MODEL_PATH = "best.pt"
+CONFIDENCE_THRESHOLD = 0.65
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 RELAY_PIN = 18
@@ -113,14 +112,11 @@ def detection_loop():
     global last_trigger_time, detection_status, snapshot_frame
 
     model = YOLO(MODEL_PATH)
-    
-    # Initialize Picamera2
-    picam2 = Picamera2()
-    config = picam2.create_preview_configuration(
-        main={"format": "RGB888", "size": (FRAME_WIDTH, FRAME_HEIGHT)}
-    )
-    picam2.configure(config)
-    picam2.start()
+    cap = cv2.VideoCapture(0)
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     print("Detection loop started...")
 
@@ -132,15 +128,13 @@ def detection_loop():
             
             if is_drawing:
                 # Capture snapshot frame when drawing starts
-                try:
-                    frame = picam2.capture_array()
-                    if frame is not None:
-                        # Convert RGB to BGR for OpenCV (picamera2 returns RGB)
-                        if len(frame.shape) == 3 and frame.shape[2] >= 3:
-                            frame = cv2.cvtColor(frame[:, :, :3], cv2.COLOR_RGB2BGR)
-                    else:
-                        time.sleep(0.1)
-                        continue
+                ret, frame = cap.read()
+                if ret:
+                    # Pull latest frame
+                    for _ in range(3):
+                        tmp_ret, tmp_frame = cap.read()
+                        if tmp_ret:
+                            frame = tmp_frame
                     
                     with snapshot_lock:
                         snapshot_frame = frame.copy()
@@ -167,19 +161,15 @@ def detection_loop():
                     time.sleep(0.1)  # Slower update during drawing
                     continue
             
-            try:
-                frame = picam2.capture_array()
-                if frame is None:
-                    time.sleep(0.03)
-                    continue
-                
-                # Convert RGB to BGR for OpenCV (picamera2 returns RGB)
-                if len(frame.shape) == 3 and frame.shape[2] >= 3:
-                    frame = cv2.cvtColor(frame[:, :, :3], cv2.COLOR_RGB2BGR)
-            except Exception as e:
-                print(f"Error capturing frame: {e}")
-                time.sleep(0.03)
+            ret, frame = cap.read()
+            if not ret:
                 continue
+
+            # Always pull latest frame
+            for _ in range(3):
+                tmp_ret, tmp_frame = cap.read()
+                if tmp_ret:
+                    frame = tmp_frame
 
             # Run YOLO detection
             results = model(frame, conf=CONFIDENCE_THRESHOLD, verbose=False)
@@ -243,11 +233,7 @@ def detection_loop():
     except Exception as e:
         print(f"Error in detection loop: {e}")
     finally:
-        try:
-            picam2.stop()
-            picam2.close()
-        except Exception as e:
-            print(f"Error closing camera: {e}")
+        cap.release()
         # GPIO.cleanup()
         print("Camera released, GPIO cleaned.")
 
