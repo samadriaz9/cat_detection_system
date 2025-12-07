@@ -17,7 +17,7 @@ import os
 import numpy as np
 from picamera2 import Picamera2
 
-MODEL_PATH = "best.onnx"
+MODEL_PATH = "best.pt"
 CONFIDENCE_THRESHOLD = 0.25
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
