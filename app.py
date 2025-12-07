@@ -166,6 +166,10 @@ def detection_loop():
                     
                     time.sleep(0.1)  # Slower update during drawing
                     continue
+                except Exception as e:
+                    print(f"Error capturing snapshot: {e}")
+                    time.sleep(0.1)
+                    continue
             
             try:
                 frame = picam2.capture_array()
